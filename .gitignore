@@ -1,0 +1,14 @@
+Jenkinsfile
+docs*
+docs/*
+.idea*
+.idea/*
+.DS_Store
+.DS_Store/*
+_test
+_test/*
+dist
+dist/*
+test
+test/*
+dist/run.sh

@@ -1,0 +1,29 @@
+syntax = "proto3";
+package kratos.api;
+
+option go_package = "program/internal/conf;conf";
+
+import "google/protobuf/duration.proto";
+
+message Bootstrap {
+  Data data = 1;
+  Dns dns = 2;
+}
+
+message Trace {
+  string endpoint = 1;
+}
+
+message Data {
+  message Database {
+    string driver = 1;
+    string source = 2;
+    int32 maxIdleConns = 3;
+    int32 maxOpenConns = 4;
+  }
+  Database database = 1;
+}
+
+message Dns {
+  repeated string dns = 1;
+}

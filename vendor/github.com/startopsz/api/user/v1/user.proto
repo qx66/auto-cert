@@ -1,0 +1,626 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "github.com/startopsz/user/api/user/v1;v1";
+
+//import "google/api/annotations.proto";
+//import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
+
+service User {
+  // 1.1 注册用户
+  rpc GetRegisterUserVerifyCode (GetRegisterUserVerifyCodeReq) returns (GetRegisterUserVerifyCodeReply) {};
+  rpc Register (RegisterUserReq) returns (RegisterUserReply) {};
+
+  //rpc RegisterFromDingTalk (RegisterDingTalkUserReq) returns (RegisterDingTalkUserReply) {};
+  // 1.2 验证用户是否存在
+  rpc ExistUser (ExistUserReq) returns (ExistUserReply) {};
+
+  // 1.3 更新用户密码
+  // 获取忘记密码/更新密码验证码
+  rpc GetForgotPasswdVerifyCode (GetForgotPasswdVerifyCodeReq) returns (GetForgotPasswdVerifyCodeReply) {};
+
+  rpc GetUpdateUserPasswdVerifyCode (GetUpdateUserPasswdVerifyCodeReq) returns (GetUpdateUserPasswdVerifyCodeReply) {};
+
+  rpc UpdateForgotPasswd (UpdateForgotPasswdReq) returns (UpdateForgotPasswdReply) {}
+  rpc UpdateUserPasswd(UpdateUserPasswdReq) returns (UpdateUserPasswdReply) {};
+
+  // 1.4 用户登录
+  rpc GetLoginVerifyCode (GetLoginVerifyCodeReq) returns (GetLoginVerifyCodeReply) {};
+  rpc LoginByVerifyCode (LoginByVerifyCodeReq) returns (LoginByVerifyCodeReply) {};
+  rpc Login(LoginReq) returns (LoginReply) {};
+
+  // 1.5 用户登出
+  rpc Logout(LogoutReq) returns (LogoutReply) {};
+  // 1.6 使用Token获取用户信息
+  rpc GetUserByToken (GetUserByTokenReq) returns (GetUserByTokenReply) {};
+  // 1.7 通过Uuid获取用户信息 - 因为没有鉴权，调用方需要确认严格确认是否需要调用该接口
+  rpc GetUserByUuid (GetUserByUuidReq) returns (GetUserByUuidReply) {};
+
+  // 2. organization
+  // 2.1 创建组织
+  rpc CreateOrganization (CreateOrganizationReq) returns (CreateOrganizationReply) {};
+  // 获取组织
+  //rpc GetOrganization (GetOrganizationReq) returns (GetOrganizationReply) {};
+  // 2.2 删除组织
+  rpc DelOrganization (DelOrganizationReq) returns (DelOrganizationReply) {};
+
+  // 2.3.1 用户加入组织
+  rpc UserJoinOrganization (UserJoinOrganizationReq) returns (UserJoinOrganizationReply) {};
+  // 2.3.2 获取用户加入组织历史 - 用户访问
+  rpc GetUserJoinOrganizationHis (GetUserJoinOrganizationHisReq) returns (GetUserJoinOrganizationHisReply) {};
+  // 2.3.3 获取组织被用户申请历史 - 组织管理员访问
+  rpc GetOrganizationJoinHis (GetOrganizationJoinHisReq) returns (GetOrganizationJoinHisReply) {};
+  // 2.3.4 管理用户加入组织 - 组织管理员访问 - 同意/拒绝用户加入
+  rpc ManageUserJoinOrganization (ManageUserJoinOrganizationReq) returns (ManageUserJoinOrganizationReply) {};
+
+  // 2.4 用户离开组织
+  rpc UserLeaveOrganization (UserLeaveOrganizationReq) returns (UserLeaveOrganizationReply) {};
+  // 2.5 驱逐用户离开组织
+  rpc EvictionUserOrganization (EvictionUserOrganizationReq) returns (EvictionUserOrganizationReply) {};
+
+  // 2.6.1 获取组织内用户
+  rpc GetOrganizationUser (GetOrganizationUserReq) returns (GetOrganizationUserReply) {};
+  // 2.6.2 获取用户的组织
+  rpc GetUserOrganization (GetUserOrganizationReq) returns (GetUserOrganizationReply) {};
+  // 获取用户 组织uuid 的信息
+  rpc GetUserOrganizationInfo (GetUserOrganizationInfoReq) returns (GetUserOrganizationInfoReply) {};
+
+  // 2.7 验证用户在组织内
+  rpc VerifyUserInOrg (VerifyUserInOrgReq) returns (VerifyUserInOrgReply) {}
+
+  // 2.8 组织钉钉配置
+  // 2.8.1 添加组织钉钉配置
+  rpc AddOrganizationDingTalk (AddOrganizationDingTalkReq) returns (AddOrganizationDingTalkReply) {};
+  // 2.8.2 获取组织钉钉配置
+  rpc GetOrganizationDingTalk (GetOrganizationDingTalkReq) returns (GetOrganizationDingTalkReply) {};
+  // 2.8.3 删除组织钉钉配置
+  rpc DelOrganizationDingTalk (DelOrganizationDingTalkReq) returns (DelOrganizationDingTalkReply) {};
+  // 2.8.4 获取组织钉钉token
+  rpc GetOrganizationDingTalkToken (GetOrganizationDingTalkTokenReq) returns (GetOrganizationDingTalkTokenReply) {};
+
+
+  // 2.9 组织钉钉登录
+  // 2.9.1 添加组织钉钉登录信息
+  rpc AddOrganizationDingTalkLogin (AddOrganizationDingTalkLoginReq) returns (AddOrganizationDingTalkLoginReply) {};
+  // 2.9.2 添加组织钉钉登录信息
+  rpc GetOrganizationDingTalkLogin (GetOrganizationDingTalkLoginReq) returns (GetOrganizationDingTalkLoginReply) {};
+  // 2.9.3 添加组织钉钉登录信息
+  rpc DelOrganizationDingTalkLogin (DelOrganizationDingTalkLoginReq) returns (DelOrganizationDingTalkLoginReply) {};
+  // 2.9.4 获取钉钉登录Url
+  rpc GetOrganizationDingTalkLoginUrl (GetOrganizationDingTalkLoginUrlReq) returns (GetOrganizationDingTalkLoginUrlReply) {};
+  // 2.9.5 钉钉登录-钉钉服务回调请求
+  rpc OrganizationDingTalkLogin (OrganizationDingTalkLoginReq) returns (OrganizationDingTalkLoginReply) {};
+  // 2.9.6 获取用户组织钉钉用户信息
+  rpc GetOrganizationDingTalkUser (GetOrganizationDingTalkUserReq) returns (GetOrganizationDingTalkUserReply) {};
+
+  // 3.1 使用 salt 加密字符串
+  rpc EncryptionWithSalt (EncryptionWithSaltReq) returns (EncryptionWithSaltReply) {};
+  // 3.2 使用 salt 解密字符串
+  rpc DecryptionWithSalt (DecryptionWithSaltReq) returns (DecryptionWithSaltReply) {};
+
+
+  // oauth
+  //rpc OAuthAuthorize(OAuthAuthorizeReq) returns (OAuthAuthorizeReply) {};
+  //rpc OAuthToken(OAuthTokenReq) returns (OAuthTokenReply) {};
+  //rpc OAuthUserInfo(OAuthUserReq) returns (OAuthUserReply) {};
+
+  // company
+  //rpc CreateCompany (CreateCompanyReq) returns (CreateCompanyReply) {};
+  //rpc GetCompany (GetCompanyReq) returns (GetCompanyReply) {};
+  //rpc DelCompany (DelCompanyReq) returns (DelCompanyReply) {};
+  //rpc RelevancyDingTalkToCompany (RelevancyDingTalkToCompanyReq) returns (RelevancyDingTalkToCompanyReply) {};
+  //rpc RelevancyFeiShuToCompany (RelevancyFeiShuToCompanyReq) returns (RelevancyFeiShuToCompanyReply) {};
+}
+
+// 获取注册用户验证码
+message GetRegisterUserVerifyCodeReq {
+  string phoneNumber = 1;
+}
+message GetRegisterUserVerifyCodeReply {
+  bool result = 1;
+}
+
+// 注册用户
+message RegisterUserReq {
+  string userName = 1;
+  string nickName = 2;
+  string password = 3 [(validate.rules).string.min_len = 7];
+  string phoneRegion = 4;
+  string phone = 5;
+  string verifyCode = 6;
+  string email = 7 [(validate.rules).string.email = true];
+  //  bool isActive = 8;
+}
+message RegisterUserReply {
+  bool result = 1;
+}
+
+// 验证用户是否存在
+message ExistUserReq {
+  string userName = 1;
+  string phone = 2;
+  string email = 3;
+}
+message ExistUserReply {
+  bool exists = 1;
+  string uuid = 2;
+}
+
+
+
+// 获取用户钉钉私有 Qr 登陆 url
+//message GetDingTalkPrivateLoginUrlReq {
+//  string userUuid = 1 [(validate.rules).string.min_len = 1];
+//  string companyUuid = 2 [(validate.rules).string.min_len = 1];
+//}
+//message GetDingTalkPrivateLoginUrlReply {
+//  string qrUrl = 1;
+//}
+
+// 钉钉用户注册
+//message RegisterDingTalkUserReq {
+//  string uuid = 2;
+//  string companyUuid = 3;
+//  string nickName = 4;
+//  string userId = 5;
+//  string openId = 6;
+//  string unionId = 7;
+//  int64 createTime = 8;
+//}
+//message RegisterDingTalkUserReply {
+//  string requestId = 1;
+//}
+
+
+// 获取登录验证码
+message GetLoginVerifyCodeReq {
+  string phoneNumber = 1;
+}
+message GetLoginVerifyCodeReply {
+  bool result = 1;
+}
+// 验证码登录
+message LoginByVerifyCodeReq {
+  string phoneNumber = 1;
+  string verifyCode = 2;
+}
+message LoginByVerifyCodeReply {
+  string userUuid = 1;
+  string token = 2;
+  int64 expired = 3;
+}
+
+// 用户登陆
+message LoginReq {
+  string username = 1;
+  string phone = 2;
+  string email = 3;
+  string password = 4 [(validate.rules).string.min_len = 7];
+}
+message LoginReply {
+  string userUuid = 1;
+  string token = 2;
+  int64 expired = 3;
+}
+// 登出
+message LogoutReq {
+  //  string uuid = 1 [(validate.rules).string.min_len = 1];
+  string token = 2 [(validate.rules).string.min_len = 1];
+}
+message LogoutReply {
+}
+
+// 获取用户信息 by token
+message GetUserByTokenReq {
+  string token = 1 [(validate.rules).string.min_len = 1];
+}
+message GetUserByTokenReply {
+  string uuid = 2;
+  string userName = 3;
+  string nickName = 4;
+  string phone = 6;
+  string phoneRegion = 7;
+  string email = 8;
+  bool isActive = 10;
+  int64 dateJoined = 11;
+  int64 lastLogin = 12;
+}
+
+// 获取用户信息 by uuid
+message GetUserByUuidReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  //string getUserUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message GetUserByUuidReply {
+  string uuid = 2;
+  string userName = 3;
+  string nickName = 4;
+  string phone = 6;
+  string phoneRegion = 7;
+  string email = 8;
+  bool isActive = 10;
+  int64 dateJoined = 11;
+  int64 lastLogin = 12;
+}
+
+// 找回用户密码
+message GetForgotPasswdVerifyCodeReq {
+  string phoneNumber = 1  [(validate.rules).string.min_len = 1];
+}
+message GetForgotPasswdVerifyCodeReply {
+  bool result = 1;
+}
+
+// 更新用户密码
+message GetUpdateUserPasswdVerifyCodeReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+}
+message GetUpdateUserPasswdVerifyCodeReply {
+  bool result = 1;
+}
+
+//
+message UpdateUserPasswdReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string password = 2 [(validate.rules).string.min_len = 7];
+  string verifyCode = 3 [(validate.rules).string.min_len = 4];
+}
+message UpdateUserPasswdReply {
+  bool result = 1;
+}
+
+//
+message UpdateForgotPasswdReq {
+  string phoneNumber = 1  [(validate.rules).string.min_len = 4];
+  string password = 2 [(validate.rules).string.min_len = 7];
+  string verifyCode = 3 [(validate.rules).string.min_len = 4];
+}
+message UpdateForgotPasswdReply {
+  bool result = 1;
+}
+
+// 创建组织
+message CreateOrganizationReq {
+  //string companyUuid = 1 [(validate.rules).string.min_len = 1];
+  string ownUserUuid = 2 [(validate.rules).string.min_len = 1];
+  string name = 3 [(validate.rules).string.min_len = 1];
+  bool public = 4;
+}
+message CreateOrganizationReply {
+  bool result = 1;
+}
+/*
+message GetOrganizationReq {
+  //string companyUuid = 1;
+  string ownUserUuid = 2;
+  string uuid = 3;
+}
+
+message GetOrganizationReply {
+  repeated Org organization = 1;
+  message Org {
+    string uuid = 1;
+    string companyUuid = 2;
+    string ownUserUuid = 3;
+    string name = 4;
+    int64 createTime = 5;
+  }
+}
+ */
+// 删除组织
+message DelOrganizationReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+
+message DelOrganizationReply {
+  bool result = 1;
+}
+// 用户请求加入组织
+message UserJoinOrganizationReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+  string joinMessage = 3;
+  //string joinUserUuid = 3 [(validate.rules).string.min_len = 1];
+}
+message UserJoinOrganizationReply {
+  bool result = 1;
+}
+
+// 获取用户加入组织历史
+message JoinOrg {
+  string orgUuid = 1;
+  string orgName = 2;
+  string joinUserUuid = 3;
+  string joinUserName = 4;
+  string joinMessage = 5;
+  int32 result = 6;
+  string replyMessage = 7;
+  int64 requestDate = 8;
+}
+message GetUserJoinOrganizationHisReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2;
+  int32 result = 3;
+}
+message GetUserJoinOrganizationHisReply {
+  repeated JoinOrg joinOrg = 1;
+}
+// 获取组织用户加入历史
+message GetOrganizationJoinHisReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+  int32 result = 3;
+}
+message GetOrganizationJoinHisReply {
+  repeated JoinOrg joinOrg = 1;
+}
+// 管理用户加入组织
+message ManageUserJoinOrganizationReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+  string joinUserUuid = 3 [(validate.rules).string.min_len = 1];
+  bool op = 4;
+  string replyMessage = 5;
+}
+message ManageUserJoinOrganizationReply {
+  bool result = 1;
+}
+// 获取组织内用户
+message GetOrganizationUserReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2  [(validate.rules).string.min_len = 1];
+}
+message GetOrganizationUserReply {
+  repeated OrgUser organizationUser = 1;
+  message OrgUser {
+    string  orgUuid = 1;
+    string userUuid = 2;
+    string userName = 3;
+    int64 dateJoined = 4;
+    int64 role = 5;
+  }
+}
+// 获取用户所在组织列表
+message GetUserOrganizationReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+}
+message GetUserOrganizationReply {
+  repeated SelfOrgList selfOrgList = 1;
+  message SelfOrgList {
+    string orgUuid = 3;
+    string orgName = 4;
+    int64 role = 5;
+    int64 dateJoined = 6;
+    string ownerUuid = 7;
+    string ownerName = 8;
+  }
+}
+
+// 获取组织信息 - 不验证用户 - 给内部使用
+message GetUserOrganizationInfoReq {
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message GetUserOrganizationInfoReply {
+  string uuid = 1;
+  string ownUserUuid = 2;
+  string name = 3;
+  bool public = 4;
+  int64 createTime = 5;
+}
+
+// 验证用户在组织内
+message VerifyUserInOrgReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message VerifyUserInOrgReply {
+  bool result = 1;
+}
+// 用户离开组织
+message UserLeaveOrganizationReq {
+  string orgUuid = 1 [(validate.rules).string.min_len = 1];
+  string userUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message UserLeaveOrganizationReply {
+  bool result = 1;
+}
+// 驱逐用户离开组织
+message EvictionUserOrganizationReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+  string evictionUserUuid = 3 [(validate.rules).string.min_len = 1];
+}
+message EvictionUserOrganizationReply {
+  bool result = 1;
+}
+// 添加组织钉钉配置
+message AddOrganizationDingTalkReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+  int64 agentId = 3 [(validate.rules).int64.gt = 1];
+  string appKey = 4 [(validate.rules).string.min_len = 1];
+  string appSecret = 5 [(validate.rules).string.min_len = 1];
+}
+message AddOrganizationDingTalkReply {
+  bool result = 1;
+}
+// 查看组织钉钉配置
+message GetOrganizationDingTalkReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message GetOrganizationDingTalkReply {
+  string orgUuid = 2;
+  int64 agentId = 3;
+  string appKey = 4;
+  int64 createTime = 5;
+}
+// 删除组织钉钉配置
+message DelOrganizationDingTalkReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message DelOrganizationDingTalkReply {
+  bool result = 1;
+}
+// 添加组织钉钉登录配置
+message AddOrganizationDingTalkLoginReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+  string redirectUrl = 3 [(validate.rules).string.min_len = 1];
+}
+message AddOrganizationDingTalkLoginReply {
+  bool result = 1;
+}
+// 获取组织钉钉登录配置
+message GetOrganizationDingTalkLoginReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message GetOrganizationDingTalkLoginReply {
+  string redirectUrl = 1 [(validate.rules).string.min_len = 1];
+  int64 createTime = 2;
+}
+// 删除组织钉钉登录配置
+message DelOrganizationDingTalkLoginReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message DelOrganizationDingTalkLoginReply {
+  bool result = 1;
+}
+// 组织用户钉钉登陆
+message OrganizationDingTalkLoginReq {
+  string userUuid = 1;
+  string authCode = 2 [(validate.rules).string.min_len = 1];
+  string state = 3 [(validate.rules).string.min_len = 1];
+}
+message OrganizationDingTalkLoginReply {
+  bool redirect = 1;
+  string redirectUrl = 2;
+  string token = 3;
+  string content = 4;
+}
+// 获取组织钉钉登录Url
+message GetOrganizationDingTalkLoginUrlReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message GetOrganizationDingTalkLoginUrlReply {
+  string url = 1;
+}
+// 获取用户组织钉钉用户信息
+message GetOrganizationDingTalkUserReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message GetOrganizationDingTalkUserReply {
+  string orgUuid = 1;
+  string userUuid = 2;
+  string nick = 3;
+  string unionId = 4;
+  string userId = 5;
+  int64  contactType = 6;
+  string avatarUrl = 7;
+  string open_id = 8;
+  string mobile = 9;
+  string stateCode = 10;
+  string email = 11;
+  int64 createTime = 12;
+}
+// 获取组织钉钉Token
+message GetOrganizationDingTalkTokenReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string orgUuid = 2 [(validate.rules).string.min_len = 1];
+}
+message GetOrganizationDingTalkTokenReply {
+  string token = 1;
+}
+
+
+// permission
+
+// 角色 -- Operator(操作员), Developer(开发者), Deployer(部署专员), Visitor(游客), ProductAdmin(产品管理员), SuperAdmin(超级管理员)
+// Audit(审计专员)
+message Role {
+
+}
+
+// ServiceName:Method
+// Resource/Verb
+
+
+// OAuth 网站自身实现 OAuth 登陆
+// OAuth - CreateOAuth - 创建 OAuth 登陆应用
+message AddOAuthAppReq {
+  string appName = 1;
+  string clientId = 2;
+  string clientSecret = 3;
+  string redirectUrl = 4;
+  string appLogo = 5;
+}
+message AddOAuthAppReply {
+  string requestId = 1;
+}
+// OAuath - GetOAuth - 查询 OAuth 登陆应用
+message GetOAuthAppReq {
+  string clientId = 1;
+}
+message GetOAuthAppReply {
+  string requestId = 1;
+  AddOAuthAppReq oauthApp = 3;
+}
+
+// OAuth - Authorize
+message OAuthAuthorizeReq {
+  string clientId = 1;  // required
+  string state = 2;
+}
+
+message OAuthAuthorizeReply {
+  string requestId = 1;
+  string redirectUrl = 3;
+}
+// OAuth - Token
+message OAuthTokenReq {
+  string clientId = 1;  // required
+  string code = 2;      // required
+  string secret = 3;    // required
+}
+message OAuthTokenReply {
+  string token = 1;
+  string tokenType = 2;
+}
+// OAuth - UserInfo
+message OAuthUserReq {
+  string token = 1;
+}
+message OAuthUserReply {
+  string name = 1;
+  string user_id = 2;
+  string email = 3;
+  string country = 4;
+  string city = 5;
+  string sex = 6;
+}
+
+// 使用salt加密
+message EncryptionWithSaltReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string realString = 2 [(validate.rules).string.min_len = 1];
+}
+message EncryptionWithSaltReply {
+  string encryptString = 1;
+}
+// 使用salt解密
+message DecryptionWithSaltReq {
+  string userUuid = 1 [(validate.rules).string.min_len = 1];
+  string encryptString = 2 [(validate.rules).string.min_len = 1];
+}
+message DecryptionWithSaltReply {
+  string realString = 1;
+}
+
