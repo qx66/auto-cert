@@ -25,12 +25,32 @@ func NewTask(orderUseCase *biz.OrderUseCase, logger *zap.Logger) *Task {
 func (task *Task) CronJob(ctx context.Context) {
 	c := cron.New()
 	
-	err := c.AddFunc("1 * * * * *", func() {
+	err := c.AddFunc("1 */3 * * * *", func() {
 		task.orderUseCase.GetPendingStatusOrder(ctx)
 	})
 	if err != nil {
 		task.logger.Error(
-			"添加定时任务失败",
+			"添加检查Pending状态订单任务失败",
+			zap.Error(err),
+		)
+	}
+	
+	err = c.AddFunc("1 */3 * * * *", func() {
+		task.orderUseCase.GetReadyStatusOrder(ctx)
+	})
+	if err != nil {
+		task.logger.Error(
+			"添加检查Ready状态订单任务失败",
+			zap.Error(err),
+		)
+	}
+	
+	err = c.AddFunc("1 */3 * * * *", func() {
+		task.orderUseCase.GetNotCertificateOrder(ctx)
+	})
+	if err != nil {
+		task.logger.Error(
+			"添加检查无证书状态订单任务失败",
 			zap.Error(err),
 		)
 	}

@@ -27,9 +27,6 @@ github.com/chenzhuoyu/base64x
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
-## explicit; go 1.17
-github.com/decred/dcrd/dcrec/secp256k1/v4
 # github.com/envoyproxy/protoc-gen-validate v1.0.2
 ## explicit; go 1.19
 github.com/envoyproxy/protoc-gen-validate/validate
@@ -109,33 +106,6 @@ github.com/klauspost/cpuid/v2
 # github.com/leodido/go-urn v1.2.4
 ## explicit; go 1.16
 github.com/leodido/go-urn
-# github.com/lestrrat-go/blackmagic v1.0.2
-## explicit; go 1.16
-github.com/lestrrat-go/blackmagic
-# github.com/lestrrat-go/httpcc v1.0.1
-## explicit; go 1.16
-github.com/lestrrat-go/httpcc
-# github.com/lestrrat-go/httprc v1.0.4
-## explicit; go 1.17
-github.com/lestrrat-go/httprc
-# github.com/lestrrat-go/iter v1.0.2
-## explicit; go 1.13
-github.com/lestrrat-go/iter/arrayiter
-github.com/lestrrat-go/iter/mapiter
-# github.com/lestrrat-go/jwx/v2 v2.0.17
-## explicit; go 1.16
-github.com/lestrrat-go/jwx/v2/cert
-github.com/lestrrat-go/jwx/v2/internal/base64
-github.com/lestrrat-go/jwx/v2/internal/ecutil
-github.com/lestrrat-go/jwx/v2/internal/iter
-github.com/lestrrat-go/jwx/v2/internal/json
-github.com/lestrrat-go/jwx/v2/internal/pool
-github.com/lestrrat-go/jwx/v2/jwa
-github.com/lestrrat-go/jwx/v2/jwk
-github.com/lestrrat-go/jwx/v2/x25519
-# github.com/lestrrat-go/option v1.0.1
-## explicit; go 1.16
-github.com/lestrrat-go/option
 # github.com/mattn/go-isatty v0.0.19
 ## explicit; go 1.15
 github.com/mattn/go-isatty
@@ -161,21 +131,13 @@ github.com/pmezard/go-difflib/difflib
 # github.com/robfig/cron v1.2.0
 ## explicit
 github.com/robfig/cron
-# github.com/segmentio/asm v1.2.0
-## explicit; go 1.18
-github.com/segmentio/asm/base64
-github.com/segmentio/asm/cpu
-github.com/segmentio/asm/cpu/arm
-github.com/segmentio/asm/cpu/arm64
-github.com/segmentio/asm/cpu/cpuid
-github.com/segmentio/asm/cpu/x86
-github.com/segmentio/asm/internal/unsafebytes
 # github.com/startopsz/api v0.0.0-20231116100547-72bedbeacf13
 ## explicit; go 1.20
 github.com/startopsz/api/user/v1
 # github.com/startopsz/rule v0.0.13
 ## explicit; go 1.16
 github.com/startopsz/rule/pkg/response/errCode
+github.com/startopsz/rule/pkg/ssl
 # github.com/stretchr/testify v1.8.4
 ## explicit; go 1.20
 github.com/stretchr/testify/assert
@@ -241,8 +203,6 @@ go.uber.org/zap/zapcore
 golang.org/x/arch/x86/x86asm
 # golang.org/x/crypto v0.15.0
 ## explicit; go 1.18
-golang.org/x/crypto/curve25519
-golang.org/x/crypto/curve25519/internal/field
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/sha3

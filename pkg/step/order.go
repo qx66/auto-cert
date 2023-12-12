@@ -14,8 +14,8 @@ import (
 
 type NewOrderRequestPayload struct {
 	Identifiers []Identifier `json:"identifiers"`         // required, array of object
-	NotBefore   string       `json:"notBefore,omitempty"` // optional
-	NotAfter    string       `json:"notAfter,omitempty"`  // optional
+	NotBefore   string       `json:"notBefore,omitempty"` // optional, e.g: "2016-01-01T00:00:00Z"
+	NotAfter    string       `json:"notAfter,omitempty"`  // optional, e.g: "2016-01-08T00:00:00Z"
 }
 
 func GenerateNewOrderPayload(identifiers []Identifier) (string, error) {
@@ -23,8 +23,11 @@ func GenerateNewOrderPayload(identifiers []Identifier) (string, error) {
 		return "", errors.New("identifiers 不能为空")
 	}
 	
+	// NotBefore and NotAfter are not supported
 	payload := NewOrderRequestPayload{
 		Identifiers: identifiers,
+		//NotBefore:   time.Now().Format("2006-01-02T15:04:00+04:00"),
+		//NotAfter:    time.Now().AddDate(0, 2, 0).Format("2006-01-02T15:04:00+04:00"),
 	}
 	
 	payloadByte, err := json.Marshal(payload)
@@ -63,6 +66,10 @@ func NewOrder(url string, req []byte) (OrderResponse, string, string, error) {
 	respBodyByte, err := io.ReadAll(respBody)
 	if err != nil {
 		return orderResponse, "", "", err
+	}
+	
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return orderResponse, "", "", errors.New(string(respBodyByte))
 	}
 	
 	err = json.Unmarshal(respBodyByte, &orderResponse)
@@ -135,6 +142,10 @@ func FinalizeOrder(finalizeOrderUrl string, req []byte) (OrderResponse, error) {
 	respBodyByte, err := io.ReadAll(respBody)
 	if err != nil {
 		return order, err
+	}
+	
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return order, errors.New(string(respBodyByte))
 	}
 	
 	err = json.Unmarshal(respBodyByte, &order)

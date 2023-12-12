@@ -53,21 +53,31 @@ func (orderDataSource *OrderDataSource) ExistOrder(ctx context.Context, orderUrl
 	return true, nil
 }
 
-func (orderDataSource *OrderDataSource) ListPendingOrder(ctx context.Context) ([]biz.Order, error) {
+func (orderDataSource *OrderDataSource) ListOrderByStatus(ctx context.Context, status string) ([]biz.Order, error) {
 	var orders []biz.Order
 	tx := orderDataSource.data.db.WithContext(ctx).
-		Where("status = ?", "pending").
+		Where("status = ?", status).
 		Find(&orders)
 	return orders, tx.Error
 }
 
-func (orderDataSource *OrderDataSource) UpdateOrderCertificate(ctx context.Context, orderUuid, certificate string) error {
+func (orderDataSource *OrderDataSource) ListNotCertificateOrder(ctx context.Context) ([]biz.Order, error) {
+	var orders []biz.Order
+	tx := orderDataSource.data.db.WithContext(ctx).
+		Where("status = ? and certificate = ?", "valid", "").
+		Find(&orders)
+	return orders, tx.Error
+}
+
+func (orderDataSource *OrderDataSource) UpdateOrderCertificate(ctx context.Context, orderUuid, certificate, notBefore, notAfter string) error {
 	tx := orderDataSource.data.db.WithContext(ctx).
 		Model(&biz.Order{}).
 		Where("uuid = ?", orderUuid).
 		Updates(map[string]interface{}{
 			"certificate": certificate,
-			"status":      "success",
+			"not_before":  notBefore,
+			"not_after":   notAfter,
+			"status":      "valid",
 		})
 	return tx.Error
 }
@@ -75,7 +85,7 @@ func (orderDataSource *OrderDataSource) UpdateOrderCertificate(ctx context.Conte
 func (orderDataSource *OrderDataSource) UpdateOrderStatus(ctx context.Context, orderUuid, status string) error {
 	tx := orderDataSource.data.db.WithContext(ctx).
 		Model(&biz.Order{}).
-		Where("order_uuid = ?", orderUuid).
+		Where("uuid = ?", orderUuid).
 		Update("status", status)
 	return tx.Error
 }

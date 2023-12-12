@@ -27,9 +27,8 @@ type Challenge struct {
 }
 
 type ACMEError struct {
-	Type   string `json:"type"`
-	Detail string `json:"detail"`
-	Status int64  `json:"status"`
+	Type   string `json:"type,omitempty"`
+	Detail string `json:"detail,omitempty"`
 }
 
 func GetOrderAuthorization(orderAuthorizationUrl string, req []byte) (Authorization, string, error) {

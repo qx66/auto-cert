@@ -40,9 +40,12 @@ type OrderRepo interface {
 	CreateOrder(ctx context.Context, order Order) error
 	GetOrder(ctx context.Context, userUuid, orderUuid string) (Order, error)
 	ListOrder(ctx context.Context, userUuid string) ([]Order, error)
-	ListPendingOrder(ctx context.Context) ([]Order, error)
+	ListOrderByStatus(ctx context.Context, status string) ([]Order, error)
+	
+	ListNotCertificateOrder(ctx context.Context) ([]Order, error)
+	
 	ExistOrder(ctx context.Context, orderUrl string) (bool, error)
-	UpdateOrderCertificate(ctx context.Context, orderUuid, certificate string) error
+	UpdateOrderCertificate(ctx context.Context, orderUuid, certificate, notBefore, notAfter string) error
 	UpdateOrderStatus(ctx context.Context, orderUuid, status string) error
 }
 
@@ -98,7 +101,7 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 	}
 	
 	// 2. 获取 directory
-	directory, err := step.Directory(step.LetEncryptDirectoryProdUrl)
+	directory, err := step.Directory(directoryUrl)
 	if err != nil {
 		orderUseCase.logger.Error(
 			"获取Directory失败",
@@ -119,7 +122,7 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 		return
 	}
 	
-	// 4.
+	// 4. Payload
 	var identifiers []step.Identifier
 	for _, domain := range req.Domains {
 		identifiers = append(identifiers, step.Identifier{
@@ -138,7 +141,7 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 		return
 	}
 	
-	//
+	// 5. GetSignature
 	orderSignedContent, err := step.GetSignature(directory.NewOrder, nonce, orderPayload, account.Url, privateKey)
 	if err != nil {
 		orderUseCase.logger.Error(
@@ -151,7 +154,8 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 	
 	orderSignedBody := bytes.NewBuffer([]byte(orderSignedContent.FullSerialize()))
 	
-	//
+	fmt.Println("orderPayload: ", orderPayload)
+	// 6. NewOrder
 	orderResponse, orderUrl, _, err := step.NewOrder(directory.NewOrder, orderSignedBody.Bytes())
 	if err != nil {
 		orderUseCase.logger.Error(
@@ -162,7 +166,7 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 		return
 	}
 	
-	//
+	// 7. 查看订单是否存在
 	existOrder, err := orderUseCase.orderRepo.ExistOrder(c.Request.Context(), orderUrl)
 	if err != nil {
 		orderUseCase.logger.Error(
@@ -181,12 +185,12 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 	identifiersByte, err := json.Marshal(orderResponse.Identifiers)
 	authorizationsByte, err := json.Marshal(orderResponse.Authorizations)
 	
-	//
 	var domains []string
 	for _, identifier := range identifiers {
 		domains = append(domains, identifier.Value)
 	}
 	
+	// 8. 生成订单rsa私钥
 	csrPrivateKey, err := generateRsaPrivateKey()
 	if err != nil {
 		orderUseCase.logger.Error(
@@ -207,6 +211,7 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 		return
 	}
 	
+	// 8.1. 生成CSR
 	csr, err := step.GenerateCSR(csrPrivateKey, domains[0], domains, false)
 	if err != nil {
 		orderUseCase.logger.Error(
@@ -218,7 +223,7 @@ func (orderUseCase *OrderUseCase) CreateOrder(c *gin.Context) {
 	}
 	csrString := base64.RawURLEncoding.EncodeToString(csr)
 	
-	//
+	// 9. 记录数据库
 	orderUuid := uuid.NewString()
 	order := Order{
 		Uuid:           orderUuid,
@@ -275,6 +280,11 @@ func (orderUseCase *OrderUseCase) GetOrder(c *gin.Context) {
 		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
 		return
 	}
+	//
+	if order.Certificate != "" {
+		c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "order": order})
+		return
+	}
 	
 	//
 	account, err := orderUseCase.accountRepo.GetAccount(c.Request.Context(), req.UserUuid)
@@ -299,7 +309,7 @@ func (orderUseCase *OrderUseCase) GetOrder(c *gin.Context) {
 	}
 	
 	//
-	directory, err := step.Directory(step.LetEncryptDirectoryProdUrl)
+	directory, err := step.Directory(directoryUrl)
 	if err != nil {
 		orderUseCase.logger.Error(
 			"获取Directory失败",
@@ -372,633 +382,4 @@ func (orderUseCase *OrderUseCase) ListOrder(c *gin.Context) {
 	
 	c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "orders": orders})
 	return
-}
-
-// 获取订单认证信息
-
-type GetOrderAuthorizationsReq struct {
-	UserUuid string `json:"userUuid,omitempty" form:"userUuid" validate:"required"`
-}
-
-type DnsChallenge struct {
-	DomainName string `json:"domainName"`
-	FQDN       string `json:"fqdn"`
-	Type       string `json:"type,omitempty"`
-	Value      string `json:"value"`
-	Token      string `json:"token"`
-	Result     bool   `json:"result"`
-}
-
-func (orderUseCase *OrderUseCase) GetOrderAuthorizations(c *gin.Context) {
-	orderUuid := c.Param("uuid")
-	var req GetOrderAuthorizationsReq
-	err := common.BindUriQuery(c, &req)
-	if err != nil {
-		return
-	}
-	
-	// 1. 获取订单
-	order, err := orderUseCase.orderRepo.GetOrder(c.Request.Context(), req.UserUuid, orderUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取订单失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 2. 反序列化订单 Authorizations
-	var authorizations []string
-	err = json.Unmarshal(order.Authorizations, &authorizations)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"反序列化订单authorizations信息失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 3. 获取账户
-	account, err := orderUseCase.accountRepo.GetAccount(c.Request.Context(), req.UserUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取用户信息失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	privateKey, err := parsePKCS1PrivateKey([]byte(account.PrivateKey))
-	
-	if err != nil {
-		orderUseCase.logger.Error(
-			"解析用户私钥失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 4. 获取 directory
-	directory, err := step.Directory(step.LetEncryptDirectoryProdUrl)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取Directory失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 5. 获取 nonce
-	nonce, err := step.GetNonce(directory.NewNonce)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取 ACME Nonce失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 6. 获取订单 Authorizations 信息
-	var replyAuthorizations []step.Authorization
-	var replyDnsChallenges []DnsChallenge
-	replayNonce := &nonce
-	
-	for _, authorization := range authorizations {
-		// 6.1. 获取 Signature
-		getOrderAuthorizationContent, err := step.GetSignature(authorization, *replayNonce, "", account.Url, privateKey)
-		if err != nil {
-			orderUseCase.logger.Error(
-				"获取Signature失败",
-				zap.String("authorization", authorization),
-				zap.Error(err),
-			)
-			c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-			return
-		}
-		
-		getOrderAuthorizationBody := bytes.NewBuffer([]byte(getOrderAuthorizationContent.FullSerialize()))
-		// 6.2. 获取 Authorization
-		authoriz, nonce, err := step.GetOrderAuthorization(authorization, getOrderAuthorizationBody.Bytes())
-		if err != nil {
-			orderUseCase.logger.Error(
-				"获取authorization失败",
-				zap.String("authorization", authorization),
-				zap.Error(err),
-			)
-			c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-			return
-		}
-		
-		replyAuthorizations = append(replyAuthorizations, authoriz)
-		replayNonce = &nonce
-		
-		if authoriz.Status == "invalid" {
-			break
-		}
-		
-		for _, challenge := range authoriz.Challenges {
-			if challenge.Type == "dns-01" {
-				
-				authKey, err := step.GetKeyAuthorization(challenge.Token, privateKey)
-				if err != nil {
-					orderUseCase.logger.Error(
-						"生成auth challenge key失败",
-						zap.String("authorization", authorization),
-						zap.Error(err),
-					)
-					c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-					return
-				}
-				
-				fqdn, record := step.GetRecord(authoriz.Identifier.Value, authKey)
-				
-				// VerifyTxtRecord
-				var verifyResult bool = false
-				err = step.VerifyTxtRecord(fqdn, record, orderUseCase.dns)
-				if err != nil {
-					verifyResult = false
-				} else {
-					verifyResult = true
-				}
-				
-				replyDnsChallenges = append(replyDnsChallenges, DnsChallenge{
-					DomainName: authoriz.Identifier.Value,
-					FQDN:       fqdn,
-					Type:       "TXT",
-					Token:      challenge.Token,
-					Value:      record,
-					Result:     verifyResult,
-				})
-			}
-		}
-	}
-	
-	c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "authorizations": replyAuthorizations, "dnsChallenges": replyDnsChallenges})
-	return
-}
-
-// Challenge
-
-func (orderUseCase *OrderUseCase) GetOrderAuthorizationsChallenge(c *gin.Context) {
-	orderUuid := c.Param("uuid")
-	var req GetOrderAuthorizationsReq
-	err := common.BindUriQuery(c, &req)
-	if err != nil {
-		return
-	}
-	
-	// 1. 获取订单
-	order, err := orderUseCase.orderRepo.GetOrder(c.Request.Context(), req.UserUuid, orderUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取订单失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 2. 反序列化 authorizations
-	var authorizations []string
-	err = json.Unmarshal(order.Authorizations, &authorizations)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"反序列化订单authorizations信息失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 3. 获取账户
-	account, err := orderUseCase.accountRepo.GetAccount(c.Request.Context(), req.UserUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取用户信息失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	privateKey, err := parsePKCS1PrivateKey([]byte(account.PrivateKey))
-	
-	if err != nil {
-		orderUseCase.logger.Error(
-			"解析用户私钥失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 4. 获取 directory
-	directory, err := step.Directory(step.LetEncryptDirectoryProdUrl)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取Directory失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 5. 获取 nonce
-	nonce, err := step.GetNonce(directory.NewNonce)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取 ACME Nonce失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 6. authorizations
-	var replyAuthorizations []step.Authorization
-	var replyDnsChallenges []DnsChallenge
-	replayNonce := &nonce
-	
-	for _, authorization := range authorizations {
-		// 6.1. authorizations GetSignature
-		getOrderAuthorizationContent, err := step.GetSignature(authorization, *replayNonce, "", account.Url, privateKey)
-		if err != nil {
-			orderUseCase.logger.Error(
-				"获取Signature失败",
-				zap.String("authorization", authorization),
-				zap.Error(err),
-			)
-			c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-			return
-		}
-		
-		getOrderAuthorizationBody := bytes.NewBuffer([]byte(getOrderAuthorizationContent.FullSerialize()))
-		
-		// 6.2. GetOrderAuthorization
-		authoriz, nonce, err := step.GetOrderAuthorization(authorization, getOrderAuthorizationBody.Bytes())
-		if err != nil {
-			orderUseCase.logger.Error(
-				"获取authorization失败",
-				zap.String("authorization", authorization),
-				zap.Error(err),
-			)
-			c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-			return
-		}
-		
-		replyAuthorizations = append(replyAuthorizations, authoriz)
-		replayNonce = &nonce
-		
-		if authoriz.Status == "invalid" {
-			break
-		}
-		
-		// 6.3. GetOrderAuthorization Challenges
-		for _, challenge := range authoriz.Challenges {
-			if challenge.Type == "dns-01" {
-				fqdn := fmt.Sprintf("_acme-challenge.%s", authoriz.Identifier.Value)
-				// 6.3.1 Get Order Authorization DNS auth
-				authKey, err := step.GetKeyAuthorization(challenge.Token, privateKey)
-				if err != nil {
-					orderUseCase.logger.Error(
-						"生成auth challenge key失败",
-						zap.String("authorization", authorization),
-						zap.Error(err),
-					)
-					c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-					return
-				}
-				
-				fqdn, record := step.GetRecord(authoriz.Identifier.Value, authKey)
-				
-				// VerifyTxtRecord
-				err = step.VerifyTxtRecord(fqdn, record, orderUseCase.dns)
-				if err != nil {
-					orderUseCase.logger.Error(
-						"Order Authorization Challenge 验证DNS失败",
-						zap.Error(err),
-					)
-					
-					replyDnsChallenges = append(replyDnsChallenges, DnsChallenge{
-						DomainName: authoriz.Identifier.Value,
-						FQDN:       fqdn,
-						Type:       "TXT",
-						Token:      challenge.Token,
-						Value:      record,
-						Result:     false,
-					})
-					break
-				}
-				
-				replyDnsChallenges = append(replyDnsChallenges, DnsChallenge{
-					DomainName: authoriz.Identifier.Value,
-					FQDN:       fqdn,
-					Type:       "TXT",
-					Token:      challenge.Token,
-					Value:      record,
-					Result:     true,
-				})
-				
-				// 6.3.2 GetSignature
-				getOrderAuthorizationChallengeContent, err := step.GetSignature(challenge.Url, *replayNonce, "{}", account.Url, privateKey)
-				
-				if err != nil {
-					orderUseCase.logger.Error(
-						"获取Signature失败",
-						zap.String("authorization", authorization),
-						zap.Error(err),
-					)
-					c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-					return
-				}
-				
-				getOrderAuthorizationChallengeBody := bytes.NewBuffer([]byte(getOrderAuthorizationChallengeContent.FullSerialize()))
-				
-				// 6.3.3 GetOrderAuthorizationChallenge
-				challenge, nonce, err := step.GetOrderAuthorizationChallenge(challenge.Url, getOrderAuthorizationChallengeBody.Bytes())
-				if err != nil {
-					orderUseCase.logger.Error(
-						"获取authorization challenge失败",
-						zap.String("authorization", authorization),
-						zap.Error(err),
-					)
-					c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error", "challenge": challenge})
-					return
-				}
-				
-				replayNonce = &nonce
-			}
-		}
-	}
-	
-	c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "authorizations": replyAuthorizations, "dnsChallenges": replyDnsChallenges})
-	return
-}
-
-// Finalize
-
-type FinalizeOrderReq struct {
-	UserUuid string `json:"userUuid,omitempty" form:"userUuid" validate:"required"`
-}
-
-func (orderUseCase *OrderUseCase) FinalizeOrder(c *gin.Context) {
-	orderUuid := c.Param("uuid")
-	var req FinalizeOrderReq
-	err := common.BindUriQuery(c, &req)
-	if err != nil {
-		return
-	}
-	
-	// 1. 获取订单
-	order, err := orderUseCase.orderRepo.GetOrder(c.Request.Context(), req.UserUuid, orderUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取订单失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 2. 获取账户
-	account, err := orderUseCase.accountRepo.GetAccount(c.Request.Context(), req.UserUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取用户信息失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	privateKey, err := parsePKCS1PrivateKey([]byte(account.PrivateKey))
-	if err != nil {
-		orderUseCase.logger.Error(
-			"解析用户私钥失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 3. 获取 directory
-	directory, err := step.Directory(step.LetEncryptDirectoryProdUrl)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取Directory失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 4. 获取 nonce
-	nonce, err := step.GetNonce(directory.NewNonce)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取 ACME Nonce失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 5. 获取 Finalize Payload
-	finalizeOrderPayload, err := step.GenerateFinalizeOrderPayload(order.Csr)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"生成Payload失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 6. 获取 Signature
-	finalizeOrderContent, err := step.GetSignature(order.Finalize, nonce, finalizeOrderPayload, account.Url, privateKey)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"GetSignature失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	finalizeOrderBody := bytes.NewBuffer([]byte(finalizeOrderContent.FullSerialize()))
-	
-	// 7. Finalize Order
-	finalizeOrder, err := step.FinalizeOrder(order.Finalize, finalizeOrderBody.Bytes())
-	if err != nil {
-		orderUseCase.logger.Error(
-			"FinalizeOrder失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "order": finalizeOrder})
-	return
-}
-
-// 获取订单证书
-
-type GetOrderCertificateReq struct {
-	UserUuid string `json:"userUuid,omitempty" form:"userUuid" validate:"required"`
-}
-
-func (orderUseCase *OrderUseCase) GetOrderCertificate(c *gin.Context) {
-	orderUuid := c.Param("uuid")
-	var req GetOrderCertificateReq
-	
-	err := common.BindUriQuery(c, &req)
-	if err != nil {
-		return
-	}
-	
-	// 1. 获取订单
-	order, err := orderUseCase.orderRepo.GetOrder(c.Request.Context(), req.UserUuid, orderUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取订单失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 1.1. 直接返回订单证书
-	if order.Certificate != "" {
-		c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "order": order})
-		return
-	}
-	
-	// 2. 获取账户
-	account, err := orderUseCase.accountRepo.GetAccount(c.Request.Context(), req.UserUuid)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取用户信息失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	privateKey, err := parsePKCS1PrivateKey([]byte(account.PrivateKey))
-	
-	if err != nil {
-		orderUseCase.logger.Error(
-			"解析用户私钥失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 3. 获取 directory
-	directory, err := step.Directory(step.LetEncryptDirectoryProdUrl)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取Directory失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 4. 获取 nonce
-	nonce, err := step.GetNonce(directory.NewNonce)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取 ACME Nonce失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 5. 获取 Signature
-	getOrderContent, err := step.GetSignature(order.OrderUrl, nonce, "", account.Url, privateKey)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取Signature失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	getOrderBody := bytes.NewBuffer([]byte(getOrderContent.FullSerialize()))
-	
-	// 6. 获取订单
-	orderResp, nonce, err := step.GetOrder(order.OrderUrl, getOrderBody.Bytes())
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取Order失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	if orderResp.Status != "valid" {
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	if orderResp.Certificate == "" {
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 7. 获取 Signature
-	downloadCertificateContent, err := step.GetSignature(orderResp.Certificate, nonce, "", account.Url, privateKey)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取Signature失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	downloadCertificateBody := bytes.NewBuffer([]byte(downloadCertificateContent.FullSerialize()))
-	
-	// 8. 获取订单证书
-	certificate, err := step.DownloadCertificate(orderResp.Certificate, downloadCertificateBody.Bytes())
-	if err != nil {
-		orderUseCase.logger.Error(
-			"获取证书失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	// 9. 更新订单证书数据库信息
-	err = orderUseCase.orderRepo.UpdateOrderCertificate(c.Request.Context(), orderUuid, certificate)
-	if err != nil {
-		orderUseCase.logger.Error(
-			"更新订单证书失败",
-			zap.Error(err),
-		)
-		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
-		return
-	}
-	
-	c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "certificate": certificate})
-	return
-}
-
-// Cronjob 更新订单状态
-
-func (orderUseCase *OrderUseCase) GetPendingStatusOrder(ctx context.Context) {
-	
 }

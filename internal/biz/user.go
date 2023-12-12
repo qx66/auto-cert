@@ -78,7 +78,7 @@ func (accountUseCase *AccountUseCase) CreateAccount(c *gin.Context) {
 	}
 	
 	// 2. 获取 Directory
-	directory, err := step.Directory(step.LetEncryptDirectoryProdUrl)
+	directory, err := step.Directory(directoryUrl)
 	if err != nil {
 		accountUseCase.logger.Error(
 			"创建用户，访问Directory失败",
