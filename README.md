@@ -1,6 +1,17 @@
 # auto-cert
 
-[ACME rfc](https://datatracker.ietf.org/doc/html/rfc8555)
+auto-cert 是一个基于ACME协议，参考 lego acme client 编写的异步 acme 客户端.
+
+## 流程
+
+   1. 使用者需要先创建ACME账户
+   2. 使用者通过账户创建订单
+   3. 使用者通过账号获取订单Authorizations
+   4. 使用者手动/自动触发Challenge
+   5. 使用者手动/自动触发Finalize
+   6. 使用者手动/自动触发获取Certificate
+
+auto-cert暂时不提供DNSProvider
 
 ## 建议
 
@@ -33,7 +44,7 @@ CreateOrder -> status: pending
 
 ChallengeOrder -> status: ready
 
-FinalizeOrder -> valid (需要 Ready 状态)
+FinalizeOrder -> valid (需要 Ready 状态才能执行 Finalize)
 
 
     pending --------------+
@@ -55,4 +66,6 @@ FinalizeOrder -> valid (需要 Ready 状态)
       valid             invalid
 
 ## refer
+
+[ACME_RFC](https://datatracker.ietf.org/doc/html/rfc8555)
 [lego](https://github.com/go-acme/lego)
