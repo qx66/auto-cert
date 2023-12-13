@@ -50,8 +50,8 @@ submodule:
 .PHONY: build
 # build
 build:
-	mkdir -p bin/mac &&   CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/mac/ ./cmd/product/
-	mkdir -p bin/linux && CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/linux/ ./cmd/product/
+	mkdir -p bin/ && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/auto-cert-mac ./cmd/
+	mkdir -p bin/ && CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/auto-cert-linux ./cmd/
 
 .PHONY: generate
 # generate

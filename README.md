@@ -38,6 +38,10 @@ auto-cert暂时不提供DNSProvider
 2. 所有颁发请求都受到每个帐户、每个主机名、每小时 5 次失败的验证失败限制。
    (当您超过失败验证限制时，您会从您的ACME客户端收到以下错误消息 too many failed authorizations recently)
 
+## API参考
+
+[PostmanExportJson](docs%2Fauto-cert.postman_collection.json)
+
 ## Status
 
 CreateOrder -> status: pending
@@ -64,6 +68,20 @@ FinalizeOrder -> valid (需要 Ready 状态才能执行 Finalize)
       | issued           | Authorization failure
       V                  V
       valid             invalid
+
+## Usage
+
+listen: "0.0.0.0:18080"
+
+启动程序
+
+```shell
+./bin/auto-cert-mac -configPath=configs/config.yaml
+```
+
+## 定时任务
+
+每隔3分钟运行定时检查任务
 
 ## refer
 

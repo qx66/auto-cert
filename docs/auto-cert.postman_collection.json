@@ -1,0 +1,342 @@
+{
+	"info": {
+		"_postman_id": "411ae68f-28c3-40f4-8b9b-234aec326cab",
+		"name": "auto-cert",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "14458406"
+	},
+	"item": [
+		{
+			"name": "CreateAccount",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userUuid\": \"1\",\n    \"contact\": [\n        \"cherzx@sina.com\",\n        \"qx@startops.com.cn\"\n        ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:18080/account",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"account"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DeleteAccount",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/account/:userUuid",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"account",
+						":userUuid"
+					],
+					"variable": [
+						{
+							"key": "userUuid",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAccount",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/account/:userUuid",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"account",
+						":userUuid"
+					],
+					"variable": [
+						{
+							"key": "userUuid",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "CreateOrder",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userUuid\": \"1\",\n    \"domains\": [\n        \"tt.startops.com.cn\"\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:18080/order",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"order"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetOrder",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/order/:order?userUuid=1",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"order",
+						":order"
+					],
+					"query": [
+						{
+							"key": "userUuid",
+							"value": "1"
+						}
+					],
+					"variable": [
+						{
+							"key": "order",
+							"value": "85f96829-6ca1-4ded-81dc-a1e401efd915"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ListOrder",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/orders?userUuid=1",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"orders"
+					],
+					"query": [
+						{
+							"key": "userUuid",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetOrderAuthorizations",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/order/:order/authorizations?userUuid=1",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"order",
+						":order",
+						"authorizations"
+					],
+					"query": [
+						{
+							"key": "userUuid",
+							"value": "1"
+						},
+						{
+							"key": "",
+							"value": "",
+							"disabled": true
+						}
+					],
+					"variable": [
+						{
+							"key": "order",
+							"value": "85f96829-6ca1-4ded-81dc-a1e401efd915"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetOrderChallenge",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/order/:order/challenge?userUuid=1",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"order",
+						":order",
+						"challenge"
+					],
+					"query": [
+						{
+							"key": "userUuid",
+							"value": "1"
+						}
+					],
+					"variable": [
+						{
+							"key": "order",
+							"value": "85f96829-6ca1-4ded-81dc-a1e401efd915"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "FinalizeOrder",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/order/:order/finalize?userUuid=1",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"order",
+						":order",
+						"finalize"
+					],
+					"query": [
+						{
+							"key": "userUuid",
+							"value": "1"
+						}
+					],
+					"variable": [
+						{
+							"key": "order",
+							"value": "85f96829-6ca1-4ded-81dc-a1e401efd915"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetOrderCertificate",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:18080/order/:order/certificate?userUuid=1",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "18080",
+					"path": [
+						"order",
+						":order",
+						"certificate"
+					],
+					"query": [
+						{
+							"key": "userUuid",
+							"value": "1"
+						}
+					],
+					"variable": [
+						{
+							"key": "order",
+							"value": "85f96829-6ca1-4ded-81dc-a1e401efd915"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
