@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
         - name: auto-cert
-          image: "registry.cn-hangzhou.aliyuncs.com/startops/auto-cert:main_ac35c26"
+          image: "registry.cn-hangzhou.aliyuncs.com/startops/auto-cert:main_d3e6a32"
           command:
             - /app/auto-cert-linux
             - -configPath=/app/configs/config.yaml
