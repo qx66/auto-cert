@@ -35,7 +35,7 @@ type Account struct {
 }
 
 func (account *Account) TableName() string {
-	return "Account"
+	return "account"
 }
 
 type AccountUseCase struct {

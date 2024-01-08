@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/describe: "auto-cert ingress"
+  name: "auto-cert"
+  namespace: default
+
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: auto-cert.startops.com.cn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: auto-cert
+                port:
+                  number: 18080
