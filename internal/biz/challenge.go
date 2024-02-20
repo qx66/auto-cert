@@ -128,8 +128,19 @@ func (orderUseCase *OrderUseCase) GetOrderAuthorizationsChallenge(c *gin.Context
 		replyAuthorizations = append(replyAuthorizations, authoriz)
 		replayNonce = &nonce
 		
-		//
+		// 如果状态为 valid -- 会造成 authorizations 和 dnsChallenges 不对称
+		if authoriz.Status == "valid" {
+			continue
+		}
+		
+		// 如果状态不为 pending
 		if authoriz.Status != "pending" {
+			orderUseCase.logger.Info(
+				"获取authorization, 状态不为pending",
+				zap.String("status", authoriz.Status),
+				zap.String("authorization", authorization),
+				zap.Error(err),
+			)
 			preCheckAuthorizationChallenge = false
 			break
 		}
@@ -137,6 +148,10 @@ func (orderUseCase *OrderUseCase) GetOrderAuthorizationsChallenge(c *gin.Context
 		// 6.3. GetOrderAuthorization Challenges
 		for _, challenge := range authoriz.Challenges {
 			if challenge.Type == "dns-01" {
+				
+				if authoriz.Status == "valid" {
+					continue
+				}
 				
 				if challenge.Status != "pending" {
 					preCheckAuthorizationChallenge = false
@@ -206,11 +221,19 @@ func (orderUseCase *OrderUseCase) GetOrderAuthorizationsChallenge(c *gin.Context
 	
 	// 7. 实际执行 authorization Challenge
 	for _, authorization := range authorizations {
+		//
+		orderUseCase.logger.Info(
+			"开始执行 authorization Challenge",
+			zap.String("orderUuid", orderUuid),
+			zap.String("authorization", authorization),
+		)
+		
 		// 7.1. authorizations GetSignature
 		getOrderAuthorizationContent, err := step.GetSignature(authorization, *replayNonce, "", account.Url, privateKey)
 		if err != nil {
 			orderUseCase.logger.Error(
 				"获取Signature失败",
+				zap.String("orderUuid", orderUuid),
 				zap.String("authorization", authorization),
 				zap.Error(err),
 			)
@@ -235,8 +258,15 @@ func (orderUseCase *OrderUseCase) GetOrderAuthorizationsChallenge(c *gin.Context
 		replyAuthorizations = append(replyAuthorizations, authoriz)
 		replayNonce = &nonce
 		
+		if authoriz.Status == "valid" {
+			continue
+		}
+		
+		// 这种状态判断有问题 -- 理论上在预检部分没有发现，在这部分也不会发现
 		if authoriz.Status != "pending" {
-			break
+			c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
+			return
+			//break
 		}
 		
 		// 7.3. GetOrderAuthorization Challenges
@@ -304,6 +334,16 @@ func (orderUseCase *OrderUseCase) GetOrderAuthorizationsChallenge(c *gin.Context
 					c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error", "challenge": challenge})
 					return
 				}
+				
+				orderUseCase.logger.Info(
+					"执行 authorization Challenge 成功",
+					zap.String("orderUuid", orderUuid),
+					zap.String("authorization", authorization),
+					zap.String("fqdn", fqdn),
+					zap.String("record", record),
+					zap.Any("challenge", challenge),
+				)
+				
 				replayNonce = &nonce
 			}
 		}
