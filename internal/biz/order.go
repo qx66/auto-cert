@@ -271,6 +271,7 @@ func (orderUseCase *OrderUseCase) GetOrder(c *gin.Context) {
 		return
 	}
 	
+	//
 	order, err := orderUseCase.orderRepo.GetOrder(c.Request.Context(), req.UserUuid, orderUuid)
 	if err != nil {
 		orderUseCase.logger.Error(
@@ -280,7 +281,6 @@ func (orderUseCase *OrderUseCase) GetOrder(c *gin.Context) {
 		c.JSON(500, gin.H{"errCode": 500, "errMsg": "Internal Server Error"})
 		return
 	}
-	//
 	if order.Certificate != "" {
 		c.JSON(200, gin.H{"errCode": 0, "errMsg": "ok", "order": order})
 		return
@@ -297,8 +297,8 @@ func (orderUseCase *OrderUseCase) GetOrder(c *gin.Context) {
 		return
 	}
 	
+	//
 	privateKey, err := parsePKCS1PrivateKey([]byte(account.PrivateKey))
-	
 	if err != nil {
 		orderUseCase.logger.Error(
 			"解析用户私钥失败",
