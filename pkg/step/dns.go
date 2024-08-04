@@ -3,6 +3,7 @@ package step
 import (
 	"errors"
 	"github.com/miekg/dns"
+	"log"
 	"net"
 	"time"
 )
@@ -97,19 +98,41 @@ func updateDomainWithCName(r *dns.Msg, fqdn string) string {
 func VerifyTxtRecord(fqdn, value string, ns []string) error {
 	fqdn = dns.Fqdn(fqdn)
 	m := createDNSMsg(fqdn, dns.TypeTXT, true)
-	if len(ns) != 0 {
-		mx, err := sendDNSQuery(m, ns[0])
-		if err != nil {
-			return err
-		}
-		m = mx
+	
+	if len(ns) == 0 {
+		ns = defaultNameservers
 	}
+	
+	mx, err := sendDNSQuery(m, ns[0])
+	if err != nil {
+		log.Printf("发送dnsQuery失败, err: %s", err)
+		return err
+	}
+	m = mx
+	
+	log.Printf("发送dnsQuery成功")
 	
 	for _, rr := range m.Answer {
 		if cn, ok := rr.(*dns.TXT); ok {
-			if cn.Hdr.Name == fqdn && value == cn.Txt[0] {
-				return nil
+			if cn.Hdr.Name == fqdn {
+				//if  value == cn.Txt[0]
+				check := false
+				for _, answerTxt := range cn.Txt {
+					log.Printf("校验Txt值: %s", answerTxt)
+					if answerTxt == value {
+						check = true
+					}
+				}
+				
+				if check {
+					log.Printf("验证FQDN: %s Txt Value: %s成功", fqdn, value)
+					return nil
+				}
+				
+				log.Printf("验证FQDN: %s Txt Value: %s失败", fqdn, value)
 			}
+		} else {
+			log.Printf("answer 内容非Txt格式")
 		}
 	}
 	
