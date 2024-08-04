@@ -2,8 +2,8 @@ package step
 
 import (
 	"errors"
+	"fmt"
 	"github.com/miekg/dns"
-	"log"
 	"net"
 	"time"
 )
@@ -105,12 +105,12 @@ func VerifyTxtRecord(fqdn, value string, ns []string) error {
 	
 	mx, err := sendDNSQuery(m, ns[0])
 	if err != nil {
-		log.Printf("发送dnsQuery失败, err: %s", err)
+		fmt.Printf("发送dnsQuery失败, err: %s\n", err)
 		return err
 	}
 	m = mx
 	
-	log.Printf("发送dnsQuery成功")
+	fmt.Printf("发送dnsQuery成功\n")
 	
 	for _, rr := range m.Answer {
 		if cn, ok := rr.(*dns.TXT); ok {
@@ -118,21 +118,21 @@ func VerifyTxtRecord(fqdn, value string, ns []string) error {
 				//if  value == cn.Txt[0]
 				check := false
 				for _, answerTxt := range cn.Txt {
-					log.Printf("校验Txt值: %s", answerTxt)
+					fmt.Printf("校验Txt值: %s\n", answerTxt)
 					if answerTxt == value {
 						check = true
 					}
 				}
 				
 				if check {
-					log.Printf("验证FQDN: %s Txt Value: %s成功", fqdn, value)
+					fmt.Printf("验证FQDN: %s Txt Value: %s成功\n", fqdn, value)
 					return nil
 				}
 				
-				log.Printf("验证FQDN: %s Txt Value: %s失败", fqdn, value)
+				fmt.Printf("验证FQDN: %s Txt Value: %s失败\n", fqdn, value)
 			}
 		} else {
-			log.Printf("answer 内容非Txt格式")
+			fmt.Printf("answer 内容非Txt格式\n")
 		}
 	}
 	

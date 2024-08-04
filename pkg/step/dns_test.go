@@ -62,6 +62,6 @@ func TestDNSRecord(t *testing.T) {
 }
 
 func TestVerifyTxtRecord(t *testing.T) {
-	err := VerifyTxtRecord("a1.startops.com.cn", "07eJmq6yJx5xL9uncuEFgUckraEtTt98P-cp7TtuPA0", []string{"223.5.5.5:53"})
+	err := VerifyTxtRecord("a1.startops.com.cn", "-07eJmq6yJx5xL9uncuEFgUckraEtTt98P-cp7TtuPA0", []string{"223.5.5.5:53"})
 	require.NoError(t, err, "验证Txt记录失败")
 }
